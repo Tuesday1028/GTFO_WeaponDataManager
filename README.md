@@ -36,22 +36,22 @@ SwitchFireModeSoundEventID: 音效ID //暂不可用
 [
   {
     "ArchetypeDatas": [
-      22,
-	    21,
-      23,
-	    23
+	22,
+	21,
+	23,
+	23
     ],
     "FireModeSequence": [
-      1,
-      0,
-      2,
-	    2
+	1,
+	0,
+	2,
+	2
     ],
     "FireModeNameSequence": [
-      "连发",
-	    "单发",
-      "全自动_1"
-	    "全自动_2"
+	"连发",
+	"单发",
+	"全自动_1",
+	"全自动_2"
     ],
 	"OriginAmmoMax": 331.5,
     "name": "连发炮",
