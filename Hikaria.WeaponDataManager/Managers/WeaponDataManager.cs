@@ -225,9 +225,13 @@ namespace Hikaria.WeaponDataLoader.Managers
             {
                 if (wieldWeapon.ArchetypeData.FireMode == eWeaponFireMode.Auto)
                 {
-                    wieldWeapon.TriggerAutoFireEndAudio();
+                    wieldWeapon.Sound.Stop();
                 }
                 ApplyCustomData(archtypeDataBlock, recoilDataBlock);
+                if (enableSwitchFireModeSound)
+                {
+                    wieldWeapon.Sound.Post(switchFireModeSoundID, wieldWeapon.transform.position);
+                }
                 GameEventLogManager.Current.AddLog(string.Format("<color=orange>[WeaponDataManager]</color> <color=green>已切换 {0} 开火模式为 {1}</color>", wieldWeapon.ArchetypeName, nextModeName));
             }
             else
