@@ -18,9 +18,9 @@ SwitchFireModeKey: 切换开火模式的热键
 
 ReloadCustomDataKey: 热重载自定义数据的热键
 
-EnableSwitchFireModeSound: 是否启用切换开火模式的音效
+EnableSwitchFireModeSound: 是否启用切换开火模式的音效 //暂不可用
 
-SwitchFireModeSoundEventID: 音效ID
+SwitchFireModeSoundEventID: 音效ID //暂不可用
 
 ## 数据结构说明
 
@@ -37,21 +37,21 @@ SwitchFireModeSoundEventID: 音效ID
   {
     "ArchetypeDatas": [
       22,
-	  21,
+	    21,
       23,
-	  23
+	    23
     ],
     "FireModeSequence": [
       1,
       0,
       2,
-	  2
+	    2
     ],
     "FireModeNameSequence": [
       "连发",
-	  "单发",
+	    "单发",
       "全自动_1"
-	  "全自动_2"
+	    "全自动_2"
     ],
 	"OriginAmmoMax": 331.5,
     "name": "连发炮",
