@@ -20,7 +20,7 @@ EnableSwitchFireModeSound: 是否启用切换开火模式的音效
 
 ## 数据结构说明
 
-主要有三个 DataBlock:
+主要有四个 DataBlock:
  - CustomGearCategoryDataBlock
  - CustomArchetypeDataBlock
  - CustomRecoilDataBlock
