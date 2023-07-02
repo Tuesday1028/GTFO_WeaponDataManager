@@ -18,10 +18,11 @@ namespace Hikaria.WeaponDataLoader
         {
             Instance = this;
 
-            SwitchFireModeKey = configFile.Bind("按键设置", "SwitchFireModeKey", KeyCode.V, "切换开火模式按键");
+            SwitchFireModeKey = configFile.Bind("按键设置", "SwitchFireModeKey", KeyCode.V, "开火模式切换按键");
             ReloadCustomDataKey = configFile.Bind("按键设置", "ReloadCustomDataKey", KeyCode.F5, "热重载数据按键");
-            EnableSwitchFireModeSound = configFile.Bind("音效设置", "EnableSwitchFireModeSound", false, "启用开火模式音效");
-            SwitchFireModeSoundEventID = configFile.Bind("音效设置", "SwitchFireModeSoundEventID", 0U, "切换开火模式音效ID");
+            EnableSwitchFireModeSound = configFile.Bind("音效设置", "EnableSwitchFireModeSound", false, "启用开火模式切换音效");
+            FireModeChangedHint = configFile.Bind("提示设置", "FireModeChangedHint", "{0} 当前开火模式: {1}", "开火模式切换提示信息, {0} 为枪械名称, {1} 为开火模式名称");
+            FireModeChangedErrorHint = configFile.Bind("提示设置", "FireModeChangedErrorHint", "{0} 不存在其他开火模式", "开火模式切换错误提示信息, {0} 为枪械名称");
 
             ClassInjector.RegisterTypeInIl2Cpp<GameEventLogManager>();
             ClassInjector.RegisterTypeInIl2Cpp<WeaponDataManager>();
@@ -40,7 +41,9 @@ namespace Hikaria.WeaponDataLoader
 
         internal ConfigEntry<bool> EnableSwitchFireModeSound;
 
-        internal ConfigEntry<uint> SwitchFireModeSoundEventID;
+        internal ConfigEntry<string> FireModeChangedHint;
+
+        internal ConfigEntry<string> FireModeChangedErrorHint;
 
         private Harmony m_Harmony;
 

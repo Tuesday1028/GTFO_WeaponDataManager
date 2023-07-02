@@ -1,7 +1,6 @@
 ﻿using GameData;
 using Gear;
 using Hikaria.WeaponDataLoader.Utils;
-using Il2CppInterop.Runtime.Attributes;
 using Player;
 using System;
 using System.Collections.Generic;
@@ -23,8 +22,10 @@ namespace Hikaria.WeaponDataLoader.Managers
             switchFireModeKey = EntryPoint.Instance.SwitchFireModeKey.Value;
             reloadCustomDataKey = EntryPoint.Instance.ReloadCustomDataKey.Value;
             enableSwitchFireModeSound = EntryPoint.Instance.EnableSwitchFireModeSound.Value;
-            switchFireModeSoundID = EntryPoint.Instance.SwitchFireModeSoundEventID.Value;
+            HINT_FIREMODECHANGED = EntryPoint.Instance.FireModeChangedHint.Value;
+            HINT_FIREMODECHANGED_ERROR = EntryPoint.Instance.FireModeChangedErrorHint.Value;
 
+            /*
             foreach (var block in GameDataBlockBase<GearCategoryDataBlock>.GetAllBlocksForEditor())
             {
                 OriginGearCategoryDataBlocks.Add(block.persistentID, block);
@@ -33,6 +34,7 @@ namespace Hikaria.WeaponDataLoader.Managers
             {
                 OriginArchetypeDataBlocks.Add(block.persistentID, block);
             }
+            */
 
             Instance.LoadCustomData();
         }
@@ -43,7 +45,7 @@ namespace Hikaria.WeaponDataLoader.Managers
             {
                 LoadCustomData();
             }
-            if (GameStateManager.CurrentStateName != eGameStateName.InLevel || LocalPlayer.Locomotion.m_currentStateEnum == PlayerLocomotion.PLOC_State.Downed || wieldWeapon == null || PlayerChatManager.InChatMode)
+            if (GameStateManager.CurrentStateName != eGameStateName.InLevel || LocalPlayer.Locomotion.m_currentStateEnum == PlayerLocomotion.PLOC_State.Downed || wieldWeapon == null || PlayerChatManager.InChatMode || wieldWeapon.m_archeType.Firing)
             {
                 return;
             }
@@ -82,7 +84,7 @@ namespace Hikaria.WeaponDataLoader.Managers
 
             try
             {
-                using (FileStream fs = File.Open(CUSTOM_ARCHTYPEDATA_PATH, FileMode.Open))
+                using (FileStream fs = File.Open(CUSTOM_ARCHETYPEDATA_PATH, FileMode.Open))
                 {
                     using (StreamReader reader = new StreamReader(fs))
                     {
@@ -123,13 +125,39 @@ namespace Hikaria.WeaponDataLoader.Managers
                 Logs.LogError(ex.Message);
                 GameEventLogManager.Current.AddLog("<color=orange>[WeaponDataManager]</color> <color=red>读取 CustomRecoilDataBlocks 失败, 请查看 Log 获取更多信息!</color>");
             }
+
+            try
+            {
+                using (FileStream fs = File.Open(CUSTOM_AUDIODATA_PATH, FileMode.Open))
+                {
+                    using (StreamReader reader = new StreamReader(fs))
+                    {
+                        string jsonContent = reader.ReadToEnd();
+                        JsonConverter converter = new JsonConverter();
+                        CustomWeaponAudioDataBlocks.Clear();
+                        CustomWeaponAudioDataBlocks = converter.Deserialize<List<CustomWeaponAudioDataBlock>>(jsonContent).ToDictionary(x => x.persistentID, x => x);
+                    }
+                }
+                GameEventLogManager.Current.AddLog("<color=orange>[WeaponDataManager]</color> <color=green>已读取 CustomWeaponAudioDataBlocks</color>");
+            }
+            catch (Exception ex)
+            {
+                Logs.LogError(ex.Message);
+                GameEventLogManager.Current.AddLog("<color=orange>[WeaponDataManager]</color> <color=red>读取 CustomWeaponAudioDataBlocks 失败, 请查看 Log 获取更多信息!</color>");
+            }
+
+            if (wieldWeapon != null)
+            {
+                TryApplyCustomData(wieldWeapon.GearCategoryData.persistentID);
+            }
         }
 
-        public bool TryGetNextFireMode(uint categoryPersistentID, eWeaponFireMode currentMode, out eWeaponFireMode nextMode, out string nextModeName, out CustomArchetypeDataBlock archtypeDataBlock, out CustomRecoilDataBlock recoilDataBlock)
+        public bool TryGetNextFireMode(uint categoryPersistentID, eWeaponFireMode currentMode, out eWeaponFireMode nextMode, out string nextModeName, out CustomArchetypeDataBlock archtypeDataBlock, out CustomRecoilDataBlock recoilDataBlock, out CustomWeaponAudioDataBlock weaponAudioDataBlock)
         {
             nextMode = currentMode;
             archtypeDataBlock = null;
             recoilDataBlock = null;
+            weaponAudioDataBlock = null;
             nextModeName = string.Empty;
 
             if (!CustomGearCategoryDataBlocks.TryGetValue(categoryPersistentID, out CustomGearCategoryDataBlock categoryDataBlock) || !categoryDataBlock.internalEnabled)
@@ -154,21 +182,29 @@ namespace Hikaria.WeaponDataLoader.Managers
             {
                 return false;
             }
+            if (!CustomWeaponAudioDataBlocks.TryGetValue(categoryDataBlock.FireModeAudioSequence[FireModeIndex[categoryPersistentID]], out weaponAudioDataBlock))
+            {
+                return false;
+            }
 
             return true;
         }
 
-        private void ApplyCustomData(CustomArchetypeDataBlock customArchetypeDataBlock, CustomRecoilDataBlock customRecoilDataBlock)
+        private void ApplyCustomData(CustomArchetypeDataBlock customArchetypeDataBlock, CustomRecoilDataBlock customRecoilDataBlock, CustomWeaponAudioDataBlock customWeaponAudioDataBlock)
         {
             SavePrevAmmoPercent();
             ArchetypeDataBlock archetypeDataBlock = wieldWeapon.ArchetypeData;
             RecoilDataBlock recoilDataBlock = wieldWeapon.RecoilData;
+            WeaponAudioDataBlock weaponAudioDataBlock = wieldWeapon.AudioData;
             CopyBlock(customArchetypeDataBlock, ref archetypeDataBlock);
             CopyBlock(customRecoilDataBlock, ref recoilDataBlock);
+            CopyBlock(customWeaponAudioDataBlock, ref weaponAudioDataBlock);
             wieldWeapon.ArchetypeData = archetypeDataBlock;
             wieldWeapon.RecoilData = recoilDataBlock;
             wieldWeapon.SetupArchetype();
             wieldWeapon.m_archeType.m_recoilData = recoilDataBlock;
+            wieldWeapon.AudioData = weaponAudioDataBlock;
+            wieldWeapon.SetupAudioEvents();
             HandlerLocalAmmoStorage();
             RestoreAmmoPercent();
             LocalPlayer.Sync.WantsToWieldSlot(wieldWeapon.m_inventory.WieldedSlot, false);
@@ -192,12 +228,11 @@ namespace Hikaria.WeaponDataLoader.Managers
         {
             PlayerAmmoStorage ammoStorage = PlayerBackpackManager.LocalBackpack.AmmoStorage;
             InventorySlotAmmo inventorySlotAmmo = ammoStorage.GetInventorySlotAmmo(wieldWeapon.m_inventory.WieldedSlot);
-            float num = (StoredAmmoBySlot[wieldWeapon.m_inventory.WieldedSlot] + (inventorySlotAmmo.IsFull ? 0f : 0.001f)) * (float)inventorySlotAmmo.BulletsMaxCap;
+            float num = (StoredAmmoBySlot[wieldWeapon.m_inventory.WieldedSlot] + (inventorySlotAmmo.IsFull ? 0f : 0.001f)) * (float)inventorySlotAmmo.BulletsMaxCap; //防止切换模式后弹药量越来越少, 需要增加一些弹药
             inventorySlotAmmo.AmmoInPack = num * inventorySlotAmmo.CostOfBullet;
             ammoStorage.SetClipAmmoInSlot(wieldWeapon.m_inventory.WieldedSlot);
             ammoStorage.UpdateSlotAmmoUI(wieldWeapon.m_inventory.WieldedSlot);
             ammoStorage.NeedsSync = true;
-
         }
 
         public bool TryApplyCustomData(uint categoryPersistentID)
@@ -214,29 +249,30 @@ namespace Hikaria.WeaponDataLoader.Managers
             {
                 return false;
             }
+            if (!CustomWeaponAudioDataBlocks.TryGetValue(customCategoryDataBlock.FireModeAudioSequence[FireModeIndex[categoryPersistentID]], out CustomWeaponAudioDataBlock customWeaponAudioDataBlock) || !customWeaponAudioDataBlock.internalEnabled)
+            {
+                return false;
+            }
 
-            ApplyCustomData(customArchetypeDataBlock, customRecoilDataBlock);
+            ApplyCustomData(customArchetypeDataBlock, customRecoilDataBlock, customWeaponAudioDataBlock);
+            GameEventLogManager.Current.AddLog(string.Format(string.Format("<color=orange>[WeaponDataManager]</color> <color=green>{0}</color>", HINT_FIREMODECHANGED), wieldWeapon.ArchetypeName, CustomGearCategoryDataBlocks[categoryPersistentID].FireModeNameSequence[FireModeIndex[categoryPersistentID]]));
             return true;
         }
 
         public void SwitchFireMode()
         {
-            if (TryGetNextFireMode(wieldWeapon.GearCategoryData.persistentID, wieldWeapon.ArchetypeData.FireMode, out eWeaponFireMode nextMode, out string nextModeName, out CustomArchetypeDataBlock archtypeDataBlock, out CustomRecoilDataBlock recoilDataBlock))
+            if (TryGetNextFireMode(wieldWeapon.GearCategoryData.persistentID, wieldWeapon.ArchetypeData.FireMode, out eWeaponFireMode nextMode, out string nextModeName, out CustomArchetypeDataBlock archtypeDataBlock, out CustomRecoilDataBlock recoilDataBlock, out CustomWeaponAudioDataBlock weaponAudioDataBlock))
             {
-                if (wieldWeapon.ArchetypeData.FireMode == eWeaponFireMode.Auto)
-                {
-                    wieldWeapon.Sound.Stop();
-                }
-                ApplyCustomData(archtypeDataBlock, recoilDataBlock);
+                ApplyCustomData(archtypeDataBlock, recoilDataBlock, weaponAudioDataBlock);
                 if (enableSwitchFireModeSound)
                 {
-                    wieldWeapon.Sound.Post(switchFireModeSoundID, wieldWeapon.transform.position);
+                    wieldWeapon.Sound.Post(CustomGearCategoryDataBlocks[wieldWeapon.GearCategoryData.persistentID].SwitchFireModeAudioEventID, wieldWeapon.transform.position);
                 }
-                GameEventLogManager.Current.AddLog(string.Format("<color=orange>[WeaponDataManager]</color> <color=green>已切换 {0} 开火模式为 {1}</color>", wieldWeapon.ArchetypeName, nextModeName));
+                GameEventLogManager.Current.AddLog(string.Format(string.Format("<color=orange>[WeaponDataManager]</color> <color=green>{0}</color>", HINT_FIREMODECHANGED), wieldWeapon.ArchetypeName, nextModeName));
             }
             else
             {
-                GameEventLogManager.Current.AddLog(string.Format("<color=orange>[WeaponDataManager]</color> <color=red>{0} 不存在其他开火模式</color>", wieldWeapon.ArchetypeName));
+                GameEventLogManager.Current.AddLog(string.Format(string.Format("<color=orange>[WeaponDataManager]</color> <color=red>{0}</color>", HINT_FIREMODECHANGED_ERROR), wieldWeapon.ArchetypeName));
             }
         }
 
@@ -249,8 +285,6 @@ namespace Hikaria.WeaponDataLoader.Managers
 
         private KeyCode reloadCustomDataKey = KeyCode.F5;
 
-        private uint switchFireModeSoundID = 0U;
-
         private bool enableSwitchFireModeSound = false;
 
         public static WeaponDataManager Instance;
@@ -259,11 +293,17 @@ namespace Hikaria.WeaponDataLoader.Managers
 
         public BulletWeapon wieldWeapon;
 
-        internal static readonly string CUSTOM_ARCHTYPEDATA_PATH = BepInEx.Paths.ConfigPath + "/Hikaria/WeaponDataManager/CustomArchetypeDataBlock.json";
+        private static string HINT_FIREMODECHANGED = "{0} 当前开火模式: {1}";
+
+        private static string HINT_FIREMODECHANGED_ERROR = "{0} 不存在其他开火模式";
+
+        internal static readonly string CUSTOM_ARCHETYPEDATA_PATH = BepInEx.Paths.ConfigPath + "/Hikaria/WeaponDataManager/CustomArchetypeDataBlock.json";
 
         internal static readonly string CUSTOM_CATEGORYDATA_PATH = BepInEx.Paths.ConfigPath + "/Hikaria/WeaponDataManager/CustomGearCategoryDataBlock.json";
 
         internal static readonly string CUSTOM_RECOILDATA_PATH = BepInEx.Paths.ConfigPath + "/Hikaria/WeaponDataManager/CustomRecoilDataBlock.json";
+
+        internal static readonly string CUSTOM_AUDIODATA_PATH = BepInEx.Paths.ConfigPath + "/Hikaria/WeaponDataManager/CustomWeaponAudioDataBlock.json";
 
         internal static readonly string CONFIG_PATH = BepInEx.Paths.ConfigPath + "/Hikaria/WeaponDataManager/Config.cfg";
 
@@ -273,13 +313,76 @@ namespace Hikaria.WeaponDataLoader.Managers
 
         private Dictionary<uint, CustomRecoilDataBlock> CustomRecoilDataBlocks = new();
 
-        public Dictionary<uint, ArchetypeDataBlock> OriginArchetypeDataBlocks = new();
+        private Dictionary<uint, CustomWeaponAudioDataBlock> CustomWeaponAudioDataBlocks = new();
 
-        public Dictionary<uint, GearCategoryDataBlock> OriginGearCategoryDataBlocks = new();
+        //public Dictionary<uint, ArchetypeDataBlock> OriginArchetypeDataBlocks = new();
+
+        //public Dictionary<uint, GearCategoryDataBlock> OriginGearCategoryDataBlocks = new();
 
         private static Dictionary<uint, int> FireModeIndex = new();
 
         public Dictionary<InventorySlot, float> StoredAmmoBySlot { get; private set; } = new();
+
+        public class CustomWeaponAudioDataBlock
+        {
+            public List<string> eventOnSemiFire2D;
+
+            public List<string> eventOnBurstFire2D;
+
+            public List<string> eventOnAutoFireStart2D;
+
+            public List<string> eventOnAutoFireEnd2D;
+
+            public List<string> eventOnBurstFireOneShot2D;
+
+            public List<string> eventOnChargeup2D;
+
+            public List<string> eventOnCooldown2D;
+
+            public string eventOnChargeupEnd2D;
+
+            public string eventOnCooldownEnd2D;
+
+            public List<string> eventOnSemiFire3D;
+
+            public List<string> eventOnBurstFire3D;
+
+            public List<string> eventOnAutoFireStart3D;
+
+            public List<string> eventOnAutoFireEnd3D;
+
+            public List<string> eventOnChargeup3D;
+
+            public List<string> eventOnCooldown3D;
+
+            public string eventOnChargeupEnd3D;
+
+            public string eventOnCooldownEnd3D;
+
+            public List<string> eventOnSyncedBurstFirePerShot3D;
+
+            public List<string> eventOnSyncedAutoFirePerShot3D;
+
+            public string eventClick;
+
+            public string eventReload;
+
+            public bool TriggerBurstAudioForEachShot;
+
+            public bool TriggerAutoAudioForEachShot;
+
+            public string eventEquip;
+
+            public string eventZoomIn;
+
+            public string eventZoomOut;
+
+            public string name;
+
+            public bool internalEnabled;
+
+            public uint persistentID;
+        }
 
         public class CustomGearCategoryDataBlock
         {
@@ -288,6 +391,10 @@ namespace Hikaria.WeaponDataLoader.Managers
             public List<eWeaponFireMode> FireModeSequence;
 
             public List<string> FireModeNameSequence;
+
+            public List<uint> FireModeAudioSequence;
+
+            public uint SwitchFireModeAudioEventID;
 
             public float OriginAmmoMax;
 
@@ -484,11 +591,9 @@ namespace Hikaria.WeaponDataLoader.Managers
             to.PublicName.Id = 0U;
             to.PublicName.OldId = 0U;
             to.PublicName.UntranslatedText = from.PublicName;
-
             to.Description.Id = 0U;
             to.Description.OldId = 0U;
             to.Description.UntranslatedText = from.Description;
-
             to.FireMode = from.FireMode;
             to.RecoilDataID = from.RecoilDataID;
             to.DamageBoosterEffect = from.DamageBoosterEffect;
@@ -576,6 +681,39 @@ namespace Hikaria.WeaponDataLoader.Managers
             to.concussionIntensity = from.concussionIntensity;
             to.concussionFrequency = from.concussionFrequency;
             to.concussionDuration = from.concussionDuration;
+            to.name = from.name;
+            to.internalEnabled = from.internalEnabled;
+            to.persistentID = from.persistentID;
+        }
+
+        private static void CopyBlock(CustomWeaponAudioDataBlock from, ref WeaponAudioDataBlock to)
+        {
+            to.eventOnSemiFire2D = from.eventOnSemiFire2D.ToIl2CppList();
+            to.eventOnBurstFire2D = from.eventOnBurstFire2D.ToIl2CppList();
+            to.eventOnAutoFireStart2D = from.eventOnAutoFireStart2D.ToIl2CppList();
+            to.eventOnAutoFireEnd2D = from.eventOnAutoFireEnd2D.ToIl2CppList();
+            to.eventOnBurstFireOneShot2D = from.eventOnBurstFireOneShot2D.ToIl2CppList();
+            to.eventOnChargeup2D = from.eventOnChargeup2D.ToIl2CppList();
+            to.eventOnCooldown2D = from.eventOnCooldown2D.ToIl2CppList();
+            to.eventOnChargeupEnd2D = from.eventOnChargeupEnd2D;
+            to.eventOnCooldownEnd2D = from.eventOnCooldownEnd2D;
+            to.eventOnSemiFire3D = from.eventOnSemiFire3D.ToIl2CppList();
+            to.eventOnBurstFire3D = from.eventOnBurstFire3D.ToIl2CppList();
+            to.eventOnAutoFireStart3D = from.eventOnAutoFireStart3D.ToIl2CppList();
+            to.eventOnAutoFireEnd3D = from.eventOnAutoFireEnd3D.ToIl2CppList();
+            to.eventOnChargeup3D = from.eventOnChargeup3D.ToIl2CppList();
+            to.eventOnCooldown3D = from.eventOnCooldown3D.ToIl2CppList();
+            to.eventOnChargeupEnd3D = from.eventOnChargeupEnd3D;
+            to.eventOnCooldownEnd3D = from.eventOnCooldownEnd3D;
+            to.eventOnSyncedBurstFirePerShot3D = from.eventOnSyncedBurstFirePerShot3D.ToIl2CppList();
+            to.eventOnSyncedAutoFirePerShot3D = from.eventOnSyncedAutoFirePerShot3D.ToIl2CppList();
+            to.eventClick = from.eventClick;
+            to.eventReload = from.eventReload;
+            to.TriggerBurstAudioForEachShot = from.TriggerBurstAudioForEachShot;
+            to.TriggerAutoAudioForEachShot = from.TriggerAutoAudioForEachShot;
+            to.eventEquip = from.eventEquip;
+            to.eventZoomIn = from.eventZoomIn;
+            to.eventZoomOut = from.eventZoomOut;
             to.name = from.name;
             to.internalEnabled = from.internalEnabled;
             to.persistentID = from.persistentID;

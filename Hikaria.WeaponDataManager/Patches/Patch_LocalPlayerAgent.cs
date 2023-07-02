@@ -21,6 +21,7 @@ namespace Hikaria.WeaponDataLoader.Patches
             if (gameObject == null)
             {
                 gameObject = new GameObject("WeaponDataManager_Handlers");
+                GameObject.DontDestroyOnLoad(gameObject);
             }            
             if (gameObject.GetComponent<GameEventLogManager>() == null)
             {
