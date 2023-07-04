@@ -1,11 +1,8 @@
 ﻿using GameData;
 using Gear;
-using Hikaria.WeaponDataLoader.Utils;
 using Player;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using UnityEngine;
 using Hikaria.WeaponDataLoader.Data;
 
@@ -16,8 +13,6 @@ namespace Hikaria.WeaponDataLoader.Managers
         private void Awake()
         {
             Instance = this;
-
-            LocalPlayer = PlayerManager.GetLocalPlayerAgent();
 
             switchFireModeKey = EntryPoint.Instance.SwitchFireModeKey.Value;
             reloadCustomDataKey = EntryPoint.Instance.ReloadCustomDataKey.Value;
@@ -54,6 +49,7 @@ namespace Hikaria.WeaponDataLoader.Managers
         {
             needHint = true;
             RegisteredWeapon.Clear();
+            FireModeIndex.Clear();
 
             CustomGearCategoryDataBlock.DoLoadFromDisk();
             CustomArchetypeDataBlock.DoLoadFromDisk();
@@ -79,12 +75,14 @@ namespace Hikaria.WeaponDataLoader.Managers
                 return false;
             }
 
-            int preFireModeIndex = FireModeIndex[categoryPersistentID];
+            //int preFireModeIndex = FireModeIndex[categoryPersistentID];
             FireModeIndex[categoryPersistentID] = (FireModeIndex[categoryPersistentID] + 1) > categoryDataBlock.ArchetypeDataSequence.Count - 1 ? 0 : FireModeIndex[categoryPersistentID] + 1;
+            /*
             if (FireModeIndex[categoryPersistentID] == preFireModeIndex)
             {
                 return false;
             }
+            */
             if (!CustomArchetypeDataBlock.TryGetBlock(categoryDataBlock.ArchetypeDataSequence[FireModeIndex[categoryPersistentID]], out archtypeDataBlock))
             {
                 return false;
@@ -187,7 +185,12 @@ namespace Hikaria.WeaponDataLoader.Managers
             wieldWeapon = weapon;
             if (!RegisteredWeapon.Contains(categoryID))
             {
+                needHint = true;
                 RegisteredWeapon.Add(categoryID);
+                if (!OriginArchetypeDataBlocksByCategoryID.ContainsKey(categoryID))
+                {
+                    OriginArchetypeDataBlocksByCategoryID.Add(categoryID, GameDataBlockBase<ArchetypeDataBlock>.CreateNewCopy(weapon.ArchetypeData));
+                }
                 ApplyCustomData(customArchetypeDataBlock, customRecoilDataBlock, customWeaponAudioDataBlock);
             }
             if (needHint && enableHint)
@@ -221,7 +224,34 @@ namespace Hikaria.WeaponDataLoader.Managers
 
         public void DoClear()
         {
+            needHint = true;
             StoredAmmoBySlot.Clear();
+            RegisteredWeapon.Clear();
+            FireModeIndex.Clear();
+            ResetLocalAmmoStorage();
+        }
+
+        private static void ResetLocalAmmoStorage()
+        {
+            BackpackItem item;
+            BulletWeapon weapon;
+            ArchetypeDataBlock block;
+
+            PlayerBackpackManager.LocalBackpack.TryGetBackpackItem(InventorySlot.GearStandard, out item);
+            weapon = item.Instance.Cast<BulletWeapon>();
+            if (OriginArchetypeDataBlocksByCategoryID.TryGetValue(weapon.GearCategoryData.persistentID, out block))
+            {
+                weapon.ArchetypeData = GameDataBlockBase<ArchetypeDataBlock>.CreateNewCopy(block);
+                PlayerBackpackManager.LocalBackpack.SetupAmmoStorageForItem(weapon, InventorySlot.GearStandard);
+            }
+
+            PlayerBackpackManager.LocalBackpack.TryGetBackpackItem(InventorySlot.GearSpecial, out item);
+            weapon = item.Instance.Cast<BulletWeapon>();
+            if (OriginArchetypeDataBlocksByCategoryID.TryGetValue(weapon.GearCategoryData.persistentID, out block))
+            {
+                weapon.ArchetypeData = GameDataBlockBase<ArchetypeDataBlock>.CreateNewCopy(block);
+                PlayerBackpackManager.LocalBackpack.SetupAmmoStorageForItem(weapon, InventorySlot.GearSpecial);
+            }
         }
 
         private KeyCode switchFireModeKey = KeyCode.V;
@@ -232,7 +262,7 @@ namespace Hikaria.WeaponDataLoader.Managers
 
         public static WeaponDataManager Instance;
 
-        private PlayerAgent LocalPlayer;
+        private PlayerAgent LocalPlayer { get { return PlayerManager.GetLocalPlayerAgent(); } }
 
         public BulletWeapon wieldWeapon;
 
@@ -255,6 +285,8 @@ namespace Hikaria.WeaponDataLoader.Managers
         internal static readonly string CONFIG_PATH = BepInEx.Paths.ConfigPath + "/Hikaria/WeaponDataManager/Config.cfg";
 
         private static Dictionary<uint, int> FireModeIndex = new();
+
+        private static Dictionary<uint, ArchetypeDataBlock> OriginArchetypeDataBlocksByCategoryID = new();
 
         private static List<uint> RegisteredWeapon = new();
 

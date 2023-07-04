@@ -23,7 +23,7 @@ namespace Hikaria.WeaponDataLoader
             EnableSwitchFireModeSound = configFile.Bind("音效设置", "EnableSwitchFireModeSound", false, "启用开火模式切换音效");
             EnableHint = configFile.Bind("提示设置", "EnableHint", true, "启用开火模式切换提示信息");
             FireModeChangedHint = configFile.Bind("提示设置", "FireModeChangedHint", "{0} 当前开火模式: {1}", "开火模式切换提示信息, {0} 为枪械名称, {1} 为开火模式名称");
-            FireModeChangedErrorHint = configFile.Bind("提示设置", "FireModeChangedErrorNotHaveHint", "{0} 存在配置错误", "开火模式切换错误提示信息, {0} 为枪械名称");
+            FireModeChangedErrorHint = configFile.Bind("提示设置", "FireModeChangedErrorHint", "{0} 存在配置错误", "开火模式切换错误提示信息, {0} 为枪械名称");
 
             ClassInjector.RegisterTypeInIl2Cpp<GameEventLogManager>();
             ClassInjector.RegisterTypeInIl2Cpp<WeaponDataManager>();

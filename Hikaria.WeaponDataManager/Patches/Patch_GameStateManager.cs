@@ -15,7 +15,7 @@ namespace Hikaria.WeaponDataLoader.Patches
         [HarmonyPostfix]
         private static void GameStateManager__DoChangeState__Postfix(eGameStateName nextState)
         {
-            if (nextState == eGameStateName.InLevel)
+            if (nextState == eGameStateName.AfterLevel || nextState == eGameStateName.ExpeditionSuccess || nextState == eGameStateName.ExpeditionAbort)
             {
                 WeaponDataManager.Instance.DoClear();
             }
