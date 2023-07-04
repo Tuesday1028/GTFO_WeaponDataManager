@@ -65,11 +65,14 @@ ArchetypeDataSequence: 开火模式切换序列
 
 FireModeNameSequence: FireModeSequence 对应开火模式的译名, 译名用于在游戏中提供提示
 
-OriginAmmoMax: 原版枪械可携带弹药量的最大值
+OriginAmmoMax: 原版枪械可携带弹药量的最大值, AmmoMaxCap + ClipSize * CostOfBullet 或者 BulletsMaxCap * CostOfBullet 都可以, 区别不大
 
 persistentID 对应 GameData_GearCategoryDataBlock 的 persistentID, 两者必须保持一致。 除开这一项的其他所有属性, 包括另外三个 CustomDataBlock 中的所有属性 (包括 persistentID) 都可以随意修改
 
 ## 更新日志
+
+v1.1.1
+ - BUG 修复
 
 v1.1.0
  - 兼容 MTFO
