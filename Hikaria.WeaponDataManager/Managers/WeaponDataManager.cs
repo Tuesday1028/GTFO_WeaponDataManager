@@ -5,6 +5,10 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Hikaria.WeaponDataLoader.Data;
+using System.Reflection;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+using Hikaria.WeaponDataLoader.Utils;
 
 namespace Hikaria.WeaponDataLoader.Managers
 {
@@ -189,7 +193,9 @@ namespace Hikaria.WeaponDataLoader.Managers
                 RegisteredWeapon.Add(categoryID);
                 if (!OriginArchetypeDataBlocksByCategoryID.ContainsKey(categoryID))
                 {
-                    OriginArchetypeDataBlocksByCategoryID.Add(categoryID, GameDataBlockBase<ArchetypeDataBlock>.CreateNewCopy(weapon.ArchetypeData));
+                    ArchetypeDataBlock block = new();
+                    CopyBlock(wieldWeapon.ArchetypeData, block);
+                    OriginArchetypeDataBlocksByCategoryID.Add(categoryID, block);
                 }
                 ApplyCustomData(customArchetypeDataBlock, customRecoilDataBlock, customWeaponAudioDataBlock);
             }
@@ -241,7 +247,9 @@ namespace Hikaria.WeaponDataLoader.Managers
             weapon = item.Instance.Cast<BulletWeapon>();
             if (OriginArchetypeDataBlocksByCategoryID.TryGetValue(weapon.GearCategoryData.persistentID, out block))
             {
-                weapon.ArchetypeData = GameDataBlockBase<ArchetypeDataBlock>.CreateNewCopy(block);
+                ArchetypeDataBlock to = new();
+                CopyBlock(block, to);
+                weapon.ArchetypeData = to;
                 PlayerBackpackManager.LocalBackpack.SetupAmmoStorageForItem(weapon, InventorySlot.GearStandard);
             }
 
@@ -249,7 +257,9 @@ namespace Hikaria.WeaponDataLoader.Managers
             weapon = item.Instance.Cast<BulletWeapon>();
             if (OriginArchetypeDataBlocksByCategoryID.TryGetValue(weapon.GearCategoryData.persistentID, out block))
             {
-                weapon.ArchetypeData = GameDataBlockBase<ArchetypeDataBlock>.CreateNewCopy(block);
+                ArchetypeDataBlock to = new();
+                CopyBlock(block, to);
+                weapon.ArchetypeData = to;
                 PlayerBackpackManager.LocalBackpack.SetupAmmoStorageForItem(weapon, InventorySlot.GearSpecial);
             }
         }
@@ -306,6 +316,63 @@ namespace Hikaria.WeaponDataLoader.Managers
             PlayerBackpackManager.LocalBackpack.TryGetBackpackItem(slot, out BackpackItem item);
             BulletWeapon weapon = item.Instance.Cast<BulletWeapon>();
             return StoredAmmoBySlot[slot] * CustomGearCategoryDataBlock.GetBlock(weapon.GearCategoryData.persistentID).OriginAmmoMax;
+        }
+
+        public static void CopyBlock(ArchetypeDataBlock from, ArchetypeDataBlock to)
+        {
+            to.PublicName = from.PublicName;
+            to.Description = from.Description;
+            to.FireMode = from.FireMode;
+            to.RecoilDataID = from.RecoilDataID;
+            to.DamageBoosterEffect = from.DamageBoosterEffect;
+            to.Damage = from.Damage;
+            to.DamageFalloff = from.DamageFalloff;
+            to.StaggerDamageMulti = from.StaggerDamageMulti;
+            to.PrecisionDamageMulti = from.PrecisionDamageMulti;
+            to.DefaultClipSize = from.DefaultClipSize;
+            to.DefaultReloadTime = from.DefaultReloadTime;
+            to.CostOfBullet = from.CostOfBullet;
+            to.ShotDelay = from.ShotDelay;
+            to.PiercingBullets = from.PiercingBullets;
+            to.PiercingDamageCountLimit = from.PiercingDamageCountLimit;
+            to.HipFireSpread = from.HipFireSpread;
+            to.AimSpread = from.AimSpread;
+            to.EquipTransitionTime = from.EquipTransitionTime;
+            to.EquipSequence = new Il2CppSystem.Collections.Generic.List<WeaponAnimSequenceItem>();
+            foreach (var item in from.EquipSequence)
+            {
+                to.EquipSequence.Add(item);
+            }
+            to.AimTransitionTime = from.AimTransitionTime;
+            to.AimSequence = new Il2CppSystem.Collections.Generic.List<WeaponAnimSequenceItem>();
+            foreach (var item in from.AimSequence)
+            {
+                to.AimSequence.Add(item);
+            }
+            to.BurstDelay = from.BurstDelay;
+            to.BurstShotCount = from.BurstShotCount;
+            to.ShotgunBulletCount = from.ShotgunBulletCount;
+            to.ShotgunConeSize = from.ShotgunConeSize;
+            to.ShotgunBulletSpread = from.ShotgunBulletSpread;
+            to.SpecialChargetupTime = from.SpecialChargetupTime;
+            to.SpecialCooldownTime = from.SpecialCooldownTime;
+            to.SpecialSemiBurstCountTimeout = from.SpecialSemiBurstCountTimeout;
+            to.Sentry_StartFireDelay = from.Sentry_StartFireDelay;
+            to.Sentry_RotationSpeed = from.Sentry_RotationSpeed;
+            to.Sentry_DetectionMaxRange = from.Sentry_DetectionMaxRange;
+            to.Sentry_DetectionMaxAngle = from.Sentry_DetectionMaxAngle;
+            to.Sentry_FireTowardsTargetInsteadOfForward = from.Sentry_FireTowardsTargetInsteadOfForward;
+            to.Sentry_LongRangeThreshold = from.Sentry_LongRangeThreshold;
+            to.Sentry_ShortRangeThreshold = from.Sentry_ShortRangeThreshold;
+            to.Sentry_LegacyEnemyDetection = from.Sentry_LegacyEnemyDetection;
+            to.Sentry_FireTagOnly = from.Sentry_FireTagOnly;
+            to.Sentry_PrioTag = from.Sentry_PrioTag;
+            to.Sentry_StartFireDelayTagMulti = from.Sentry_StartFireDelayTagMulti;
+            to.Sentry_RotationSpeedTagMulti = from.Sentry_RotationSpeedTagMulti;
+            to.Sentry_DamageTagMulti = from.Sentry_DamageTagMulti;
+            to.Sentry_StaggerDamageTagMulti = from.Sentry_StaggerDamageTagMulti;
+            to.Sentry_CostOfBulletTagMulti = from.Sentry_CostOfBulletTagMulti;
+            to.Sentry_ShotDelayTagMulti = from.Sentry_ShotDelayTagMulti;
         }
     }
 }

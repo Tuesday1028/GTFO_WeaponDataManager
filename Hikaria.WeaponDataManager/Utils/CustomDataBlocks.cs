@@ -7,6 +7,7 @@ using UnityEngine;
 using Hikaria.WeaponDataLoader.Managers;
 using System.Linq;
 using System.IO;
+using System.Reflection;
 
 namespace Hikaria.WeaponDataLoader.Data
 {
