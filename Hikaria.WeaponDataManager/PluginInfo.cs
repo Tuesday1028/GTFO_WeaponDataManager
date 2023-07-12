@@ -6,9 +6,9 @@
 
         public const string PLUGIN_NAME = "WeaponDataManager";
 
-        public const string PLUGIN_VERSION = "1.1.2";
+        public const string PLUGIN_VERSION = "1.1.4";
 
-        public const string PLUGIN_INTERNAL_VERSION = "10006";
+        public const string PLUGIN_INTERNAL_VERSION = "10008";
 
         public const string AUTHOR = "ゼロツー";
     }

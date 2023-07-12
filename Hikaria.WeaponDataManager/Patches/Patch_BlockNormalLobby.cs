@@ -1,4 +1,4 @@
-﻿#if !DEBUG
+﻿#if false
 using HarmonyLib;
 using SNetwork;
 

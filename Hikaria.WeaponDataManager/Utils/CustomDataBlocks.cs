@@ -204,11 +204,7 @@ namespace Hikaria.WeaponDataLoader.Data
     [Serializable]
     internal class CustomGearCategoryDataBlock : CustomGameDataBlockBase<CustomGearCategoryDataBlock>
     {
-        public List<uint> ArchetypeDataSequence { get; set; }
-
-        public List<string> FireModeNameSequence { get; set; }
-
-        public List<uint> FireModeAudioSequence { get; set; }
+        public List<WeaponMode> WeaponModes { get; set; }
 
         public uint SwitchFireModeAudioEventID { get; set; }
 
@@ -237,6 +233,16 @@ namespace Hikaria.WeaponDataLoader.Data
                 GameEventLogManager.Current.AddLog("<color=orange>[WeaponDataManager]</color> <color=red>读取 CustomGearCategoryDataBlocks 失败, 请查看 Log 获取更多信息!</color>");
             }
         }
+    }
+
+    [Serializable]
+    internal class WeaponMode
+    {
+        public uint ArchetypeID;
+
+        public uint AudioID;
+
+        public string Name;
     }
 
     [Serializable]

@@ -80,25 +80,25 @@ namespace Hikaria.WeaponDataLoader.Managers
             }
 
             //int preFireModeIndex = FireModeIndex[categoryPersistentID];
-            FireModeIndex[categoryPersistentID] = (FireModeIndex[categoryPersistentID] + 1) > categoryDataBlock.ArchetypeDataSequence.Count - 1 ? 0 : FireModeIndex[categoryPersistentID] + 1;
+            FireModeIndex[categoryPersistentID] = (FireModeIndex[categoryPersistentID] + 1) > categoryDataBlock.WeaponModes.Count - 1 ? 0 : FireModeIndex[categoryPersistentID] + 1;
             /*
             if (FireModeIndex[categoryPersistentID] == preFireModeIndex)
             {
                 return false;
             }
             */
-            if (!CustomArchetypeDataBlock.TryGetBlock(categoryDataBlock.ArchetypeDataSequence[FireModeIndex[categoryPersistentID]], out archtypeDataBlock))
+            if (!CustomArchetypeDataBlock.TryGetBlock(categoryDataBlock.WeaponModes[FireModeIndex[categoryPersistentID]].ArchetypeID, out archtypeDataBlock))
             {
                 return false;
             }
             nextMode = archtypeDataBlock.FireMode;
-            nextModeName = categoryDataBlock.FireModeNameSequence[FireModeIndex[categoryPersistentID]];
+            nextModeName = categoryDataBlock.WeaponModes[FireModeIndex[categoryPersistentID]].Name;
 
             if (!CustomRecoilDataBlock.TryGetBlock(archtypeDataBlock.RecoilDataID, out recoilDataBlock))
             {
                 return false;
             }
-            if (!CustomWeaponAudioDataBlock.TryGetBlock(categoryDataBlock.FireModeAudioSequence[FireModeIndex[categoryPersistentID]], out weaponAudioDataBlock))
+            if (!CustomWeaponAudioDataBlock.TryGetBlock(categoryDataBlock.WeaponModes[FireModeIndex[categoryPersistentID]].AudioID, out weaponAudioDataBlock))
             {
                 return false;
             }
@@ -164,25 +164,29 @@ namespace Hikaria.WeaponDataLoader.Managers
             if (!CustomGearCategoryDataBlock.TryGetBlock(categoryID, out CustomGearCategoryDataBlock customCategoryDataBlock))
             {
                 wieldWeapon = null;
+                StoredAmmoBySlot.Remove(weapon.ItemDataBlock.inventorySlot);
                 return false;
             }
             if (!FireModeIndex.ContainsKey(categoryID))
             {
                 FireModeIndex.Add(categoryID, 0);
             }
-            if (!CustomArchetypeDataBlock.TryGetBlock(customCategoryDataBlock.ArchetypeDataSequence[FireModeIndex[categoryID]], out CustomArchetypeDataBlock customArchetypeDataBlock))
+            if (!CustomArchetypeDataBlock.TryGetBlock(customCategoryDataBlock.WeaponModes[FireModeIndex[categoryID]].ArchetypeID, out CustomArchetypeDataBlock customArchetypeDataBlock))
             {
                 wieldWeapon = null;
+                StoredAmmoBySlot.Remove(weapon.ItemDataBlock.inventorySlot);
                 return false;
             }
             if (!CustomRecoilDataBlock.TryGetBlock(customArchetypeDataBlock.RecoilDataID, out CustomRecoilDataBlock customRecoilDataBlock))
             {
                 wieldWeapon = null;
+                StoredAmmoBySlot.Remove(weapon.ItemDataBlock.inventorySlot);
                 return false;
             }
-            if (!CustomWeaponAudioDataBlock.TryGetBlock(customCategoryDataBlock.FireModeAudioSequence[FireModeIndex[categoryID]], out CustomWeaponAudioDataBlock customWeaponAudioDataBlock))
+            if (!CustomWeaponAudioDataBlock.TryGetBlock(customCategoryDataBlock.WeaponModes[FireModeIndex[categoryID]].AudioID, out CustomWeaponAudioDataBlock customWeaponAudioDataBlock))
             {
                 wieldWeapon = null;
+                StoredAmmoBySlot.Remove(weapon.ItemDataBlock.inventorySlot);
                 return false;
             }
 
@@ -202,7 +206,7 @@ namespace Hikaria.WeaponDataLoader.Managers
             if (needHint && enableHint)
             {
                 needHint = false;
-                GameEventLogManager.Current.AddLog(string.Format(string.Format("<color=orange>[WeaponDataManager]</color> <color=green>{0}</color>", HINT_FIREMODECHANGED), wieldWeapon.ArchetypeName, CustomGearCategoryDataBlock.GetBlock(categoryID).FireModeNameSequence[FireModeIndex[categoryID]]));
+                GameEventLogManager.Current.AddLog(string.Format(string.Format("<color=orange>[WeaponDataManager]</color> <color=green>{0}</color>", HINT_FIREMODECHANGED), wieldWeapon.ArchetypeName, CustomGearCategoryDataBlock.GetBlock(categoryID).WeaponModes[FireModeIndex[categoryID]].Name));
             }
 
             return true;
