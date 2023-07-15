@@ -26,7 +26,7 @@ namespace Hikaria.WeaponDataLoader.Patches
 
         [HarmonyPatch(typeof(BulletWeapon), nameof(BulletWeapon.OnUnWield))]
         [HarmonyPrefix]
-        private static void BulletWeapon__OnWield__Prefix(BulletWeapon __instance)
+        private static void BulletWeapon__OnUnWield__Prefix(BulletWeapon __instance)
         {
             if (GameStateManager.CurrentStateName != eGameStateName.InLevel || !IsWeaponOwner(__instance) || __instance.ArchetypeData == null)
             {
